@@ -17,7 +17,6 @@ import alluxio.client.file.options.SetAttributeOptions;
 import alluxio.exception.AlluxioException;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 
 import java.io.IOException;
@@ -29,13 +28,6 @@ import javax.annotation.concurrent.ThreadSafe;
  */
 @ThreadSafe
 public final class ChgrpCommand extends AbstractShellCommand {
-
-  private static final Option RECURSIVE_OPTION =
-      Option.builder("R")
-          .required(false)
-          .hasArg(false)
-          .desc("change group recursively")
-          .build();
 
   /**
    * Creates a new instance of {@link ChgrpCommand}.

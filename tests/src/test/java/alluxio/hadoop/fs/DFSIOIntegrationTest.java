@@ -44,7 +44,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.DataInputStream;
@@ -931,7 +930,6 @@ public class DFSIOIntegrationTest extends BaseIntegrationTest implements Tool {
     analyzeResult(fs, testType, execTime, DEFAULT_RES_FILE_NAME);
   }
 
-  @Nullable
   private Path getReduceFilePath(TestType testType) {
     switch (testType) {
       case TEST_TYPE_WRITE:

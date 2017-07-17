@@ -11,12 +11,11 @@
 
 package alluxio.shell;
 
-import alluxio.PropertyKey;
 import alluxio.AlluxioURI;
-import alluxio.LocalAlluxioClusterResource;
 import alluxio.Constants;
+import alluxio.LocalAlluxioClusterResource;
+import alluxio.PropertyKey;
 import alluxio.BaseIntegrationTest;
-import alluxio.SystemOutRule;
 import alluxio.cli.AlluxioShell;
 import alluxio.client.ReadType;
 import alluxio.client.WriteType;
@@ -36,13 +35,13 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 
-import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 
 /**
  * The base class for all the {@link AlluxioShell} test classes.
@@ -58,17 +57,17 @@ public abstract class AbstractAlluxioShellTest extends BaseIntegrationTest {
   protected LocalAlluxioCluster mLocalAlluxioCluster = null;
   protected FileSystem mFileSystem = null;
   protected AlluxioShell mFsShell = null;
-  protected ByteArrayOutputStream mOutput = new ByteArrayOutputStream();
+  protected ByteArrayOutputStream mOutput = null;
+  protected PrintStream mNewOutput = null;
+  protected PrintStream mOldOutput = null;
 
   @Rule
   public ExpectedException mException = ExpectedException.none();
 
-  @Rule
-  public SystemOutRule mOutRule = new SystemOutRule(mOutput);
-
   @After
   public final void after() throws Exception {
     mFsShell.close();
+    System.setOut(mOldOutput);
   }
 
   @Before
@@ -77,6 +76,10 @@ public abstract class AbstractAlluxioShellTest extends BaseIntegrationTest {
     mLocalAlluxioCluster = mLocalAlluxioClusterResource.get();
     mFileSystem = mLocalAlluxioCluster.getClient();
     mFsShell = new AlluxioShell();
+    mOutput = new ByteArrayOutputStream();
+    mNewOutput = new PrintStream(mOutput);
+    mOldOutput = System.out;
+    System.setOut(mNewOutput);
   }
 
   /**
@@ -150,7 +153,6 @@ public abstract class AbstractAlluxioShellTest extends BaseIntegrationTest {
    * @param command a shell command
    * @return the output string
    */
-  @Nullable
   protected String getCommandOutput(String[] command) {
     String cmd = command[0];
     if (command.length == 2) {
@@ -270,19 +272,5 @@ public abstract class AbstractAlluxioShellTest extends BaseIntegrationTest {
       tfis.read(actual);
       Assert.assertArrayEquals(BufferUtils.getIncreasingByteArray(size), actual);
     }
-  }
-
-  /**
-   * Verifies the return value and output of executing command meet expectations.
-   *
-   * @param expectedReturnValue the expected return value
-   * @param expectedOutput the expected output string
-   * @param command command to execute
-   */
-  protected void verifyCommandReturnValueAndOutput(int expectedReturnValue, String expectedOutput,
-      String... command) {
-    int ret = mFsShell.run(command);
-    Assert.assertEquals(expectedReturnValue, ret);
-    Assert.assertTrue(mOutput.toString().contains(expectedOutput));
   }
 }

@@ -11,11 +11,9 @@
 
 package alluxio.security.login;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-
 import alluxio.security.User;
 
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -56,16 +54,16 @@ public final class LoginModuleTest {
     loginContext.login();
 
     // verify whether OS user and Alluxio user is added.
-    assertFalse(subject.getPrincipals(clazz).isEmpty());
-    assertFalse(subject.getPrincipals(User.class).isEmpty());
+    Assert.assertFalse(subject.getPrincipals(clazz).isEmpty());
+    Assert.assertFalse(subject.getPrincipals(User.class).isEmpty());
 
     // logout and verify the user is removed
     loginContext.logout();
-    assertTrue(subject.getPrincipals(User.class).isEmpty());
+    Assert.assertTrue(subject.getPrincipals(User.class).isEmpty());
 
     // logout twice should be no-op.
     loginContext.logout();
-    assertTrue(subject.getPrincipals(User.class).isEmpty());
+    Assert.assertTrue(subject.getPrincipals(User.class).isEmpty());
   }
 
    /**
@@ -85,16 +83,16 @@ public final class LoginModuleTest {
     loginContext.login();
 
     // verify whether OS user and Alluxio user is added.
-    assertFalse(subject.getPrincipals(clazz).isEmpty());
-    assertFalse(subject.getPrincipals(User.class).isEmpty());
+    Assert.assertFalse(subject.getPrincipals(clazz).isEmpty());
+    Assert.assertFalse(subject.getPrincipals(User.class).isEmpty());
 
     // logout read only subject should fail.
     subject.setReadOnly();
     mThrown.expect(LoginException.class);
     mThrown.expectMessage("logout Failed: Subject is Readonly");
     loginContext.logout();
-    assertFalse(subject.getPrincipals(clazz).isEmpty());
-    assertFalse(subject.getPrincipals(User.class).isEmpty());
+    Assert.assertFalse(subject.getPrincipals(clazz).isEmpty());
+    Assert.assertFalse(subject.getPrincipals(User.class).isEmpty());
   }
 
   // TODO(dong): Kerberos login test

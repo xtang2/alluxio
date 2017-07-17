@@ -13,7 +13,7 @@ package alluxio.retry;
 
 import com.google.common.base.Preconditions;
 
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Random;
 
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -24,6 +24,7 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @NotThreadSafe
 public class ExponentialBackoffRetry extends SleepingRetry {
+  private final Random mRandom = new Random();
   private final int mBaseSleepTimeMs;
   private final int mMaxSleepMs;
 
@@ -51,9 +52,7 @@ public class ExponentialBackoffRetry extends SleepingRetry {
       // current logic overflows at 30, so set value to max
       return mMaxSleepMs;
     } else {
-      // use randomness to avoid contention between many operations using the same retry policy
-      int sleepMs =
-          mBaseSleepTimeMs * (ThreadLocalRandom.current().nextInt(1 << count, 1 << (count + 1)));
+      int sleepMs = mBaseSleepTimeMs * Math.max(1, mRandom.nextInt(1 << (count + 1)));
       return Math.min(abs(sleepMs, mMaxSleepMs), mMaxSleepMs);
     }
   }

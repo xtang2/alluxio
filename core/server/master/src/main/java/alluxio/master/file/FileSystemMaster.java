@@ -449,8 +449,7 @@ public interface FileSystemMaster extends Master {
    * @throws InvalidPathException if the given path is invalid
    */
   void setAttribute(AlluxioURI path, SetAttributeOptions options)
-      throws FileDoesNotExistException, AccessControlException, InvalidPathException,
-      IOException;
+      throws FileDoesNotExistException, AccessControlException, InvalidPathException;
 
   /**
    * Schedules a file for async persistence.
@@ -472,8 +471,7 @@ public interface FileSystemMaster extends Master {
    * @throws AccessControlException if permission checking fails
    */
   FileSystemCommand workerHeartbeat(long workerId, List<Long> persistedFiles)
-      throws FileDoesNotExistException, InvalidPathException, AccessControlException,
-      IOException;
+      throws FileDoesNotExistException, InvalidPathException, AccessControlException;
 
   /**
    * @return a list of {@link WorkerInfo} objects representing the workers in Alluxio

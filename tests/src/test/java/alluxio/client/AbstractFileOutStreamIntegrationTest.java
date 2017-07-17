@@ -12,9 +12,9 @@
 package alluxio.client;
 
 import alluxio.AlluxioURI;
-import alluxio.BaseIntegrationTest;
 import alluxio.LocalAlluxioClusterResource;
 import alluxio.PropertyKey;
+import alluxio.BaseIntegrationTest;
 import alluxio.client.file.FileInStream;
 import alluxio.client.file.FileOutStream;
 import alluxio.client.file.FileSystem;
@@ -22,6 +22,8 @@ import alluxio.client.file.URIStatus;
 import alluxio.client.file.options.CreateFileOptions;
 import alluxio.client.file.options.OpenFileOptions;
 import alluxio.underfs.UnderFileSystem;
+import alluxio.underfs.UnderFileSystemCluster;
+import alluxio.underfs.hdfs.LocalMiniDFSCluster;
 import alluxio.util.io.BufferUtils;
 
 import org.junit.Assert;
@@ -139,15 +141,21 @@ public abstract class AbstractFileOutStreamIntegrationTest extends BaseIntegrati
 
     try (InputStream is = ufs.open(checkpointPath)) {
       byte[] res = new byte[(int) status.getLength()];
-      int totalBytesRead = 0;
-      while (true) {
-        int bytesRead = is.read(res, totalBytesRead, res.length - totalBytesRead);
-        if (bytesRead <= 0) {
-          break;
+      String underFSClass = UnderFileSystemCluster.getUnderFSClass();
+      if ((LocalMiniDFSCluster.class.getName().equals(underFSClass)) && 0 == res.length) {
+        // Returns -1 for zero-sized byte array to indicate no more bytes available here.
+        Assert.assertEquals(-1, is.read(res));
+      } else {
+        int totalBytesRead = 0;
+        while (true) {
+          int bytesRead = is.read(res, totalBytesRead, res.length - totalBytesRead);
+          if (bytesRead <= 0) {
+            break;
+          }
+          totalBytesRead += bytesRead;
         }
-        totalBytesRead += bytesRead;
+        Assert.assertEquals((int) status.getLength(), totalBytesRead);
       }
-      Assert.assertEquals((int) status.getLength(), totalBytesRead);
       Assert.assertTrue(BufferUtils.equalIncreasingByteArray(fileLen, res));
     }
   }

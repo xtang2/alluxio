@@ -70,7 +70,6 @@ final class UfsJournalGarbageCollector implements Closeable {
       mGc.cancel(true);
       mGc = null;
     }
-    mExecutor.shutdown();
   }
 
   /**

@@ -11,7 +11,6 @@
 
 package alluxio.master.file;
 
-import alluxio.AlluxioTestDirectory;
 import alluxio.AlluxioURI;
 import alluxio.AuthenticatedUserRule;
 import alluxio.ConfigurationRule;
@@ -112,13 +111,9 @@ public final class PermissionCheckTest {
   private InodeTree mInodeTree;
 
   @Rule
-  public ConfigurationRule mConfiguration =
-      new ConfigurationRule(new ImmutableMap.Builder<PropertyKey, String>()
-          .put(PropertyKey.SECURITY_GROUP_MAPPING_CLASS, FakeUserGroupsMapping.class.getName())
-          .put(PropertyKey.SECURITY_AUTHORIZATION_PERMISSION_SUPERGROUP, TEST_SUPER_GROUP)
-          .put(PropertyKey.MASTER_MOUNT_TABLE_ROOT_UFS, AlluxioTestDirectory
-              .createTemporaryDirectory("PermissionCheckTest").getAbsolutePath())
-          .build());
+  public ConfigurationRule mConfiguration = new ConfigurationRule(ImmutableMap
+      .of(PropertyKey.SECURITY_GROUP_MAPPING_CLASS, FakeUserGroupsMapping.class.getName(),
+          PropertyKey.SECURITY_AUTHORIZATION_PERMISSION_SUPERGROUP, TEST_SUPER_GROUP));
 
   @Rule
   public AuthenticatedUserRule mAuthenticatedUser =

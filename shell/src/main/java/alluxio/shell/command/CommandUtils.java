@@ -12,13 +12,18 @@
 package alluxio.shell.command;
 
 import alluxio.AlluxioURI;
+import alluxio.Configuration;
 import alluxio.Constants;
+import alluxio.PropertyKey;
 import alluxio.client.file.FileSystem;
 import alluxio.client.file.options.SetAttributeOptions;
 import alluxio.exception.AlluxioException;
 import alluxio.wire.TtlAction;
 
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -27,6 +32,9 @@ import javax.annotation.concurrent.ThreadSafe;
  */
 @ThreadSafe
 public final class CommandUtils {
+
+  private static final String DATE_FORMAT_PATTERN =
+      Configuration.get(PropertyKey.USER_DATE_FORMAT_PATTERN);
 
   private CommandUtils() {} // prevent instantiation
 
@@ -45,6 +53,17 @@ public final class CommandUtils {
     SetAttributeOptions options =
         SetAttributeOptions.defaults().setRecursive(true).setTtl(ttlMs).setTtlAction(ttlAction);
     fs.setAttribute(path, options);
+  }
+
+  /**
+   * Converts a millisecond number to a formatted date String.
+   *
+   * @param millis a long millisecond number
+   * @return formatted date String
+   */
+  public static String convertMsToDate(long millis) {
+    DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT_PATTERN);
+    return dateFormat.format(new Date(millis));
   }
 
   /**

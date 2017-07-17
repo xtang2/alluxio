@@ -19,7 +19,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
-import javax.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
@@ -309,7 +308,6 @@ public class FileUtilsTest {
       }
 
       @Override
-      @Nullable
       public Void call() throws Exception {
         mBarrier.await(); // Await until all threads submitted
         FileUtils.createBlockPath(mPath);

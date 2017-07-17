@@ -16,7 +16,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -130,7 +129,6 @@ public final class HeartbeatThreadTest {
     }
 
     @Override
-    @Nullable
     public Void call() throws Exception {
       try (ManuallyScheduleHeartbeat.Resource r =
           new ManuallyScheduleHeartbeat.Resource(Arrays.asList(mThreadName))) {

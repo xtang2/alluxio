@@ -17,9 +17,7 @@ import alluxio.client.file.options.OutStreamOptions;
 import alluxio.client.file.policy.FileWriteLocationPolicy;
 import alluxio.client.netty.NettyRPC;
 import alluxio.client.netty.NettyRPCContext;
-import alluxio.exception.ExceptionMessage;
 import alluxio.exception.PreconditionMessage;
-import alluxio.exception.status.UnavailableException;
 import alluxio.network.protocol.RPCMessageDecoder;
 import alluxio.proto.dataserver.Protocol;
 import alluxio.resource.DummyCloseableResource;
@@ -35,7 +33,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -85,15 +83,15 @@ public final class AlluxioBlockStoreTest {
     @Override
     public WorkerNetAddress getWorkerForNextBlock(Iterable<BlockWorkerInfo> workerInfoList,
         long blockSizeBytes) {
-      if (mWorkerNetAddresses.isEmpty()) {
-        return null;
-      }
       return mWorkerNetAddresses.get(mIndex++);
     }
   }
 
+  /**
+   * The rule for a temporary folder.
+   */
   @Rule
-  public ExpectedException mException = ExpectedException.none();
+  public TemporaryFolder mTestFolder = new TemporaryFolder();
 
   private BlockMasterClient mMasterClient;
   private AlluxioBlockStore mBlockStore;
@@ -132,8 +130,12 @@ public final class AlluxioBlockStoreTest {
             throw new RuntimeException("policy threw exception");
           }
         });
-    mException.expect(Exception.class);
-    mBlockStore.getOutStream(BLOCK_ID, BLOCK_LENGTH, options);
+    try {
+      mBlockStore.getOutStream(BLOCK_ID, BLOCK_LENGTH, options);
+      Assert.fail("An exception should have been thrown");
+    } catch (Exception e) {
+      Assert.assertEquals("policy threw exception", e.getMessage());
+    }
   }
 
   @Test
@@ -141,31 +143,20 @@ public final class AlluxioBlockStoreTest {
     OutStreamOptions options =
         OutStreamOptions.defaults().setBlockSizeBytes(BLOCK_LENGTH)
             .setWriteType(WriteType.MUST_CACHE).setLocationPolicy(null);
-    mException.expect(NullPointerException.class);
-    mException.expectMessage(PreconditionMessage.FILE_WRITE_LOCATION_POLICY_UNSPECIFIED.toString());
-    mBlockStore.getOutStream(BLOCK_ID, BLOCK_LENGTH, options);
-  }
-
-  @Test
-  public void getOutStreamNoWorker() throws IOException {
-    OutStreamOptions options =
-        OutStreamOptions
-            .defaults()
-            .setBlockSizeBytes(BLOCK_LENGTH)
-            .setWriteType(WriteType.MUST_CACHE)
-            .setLocationPolicy(
-                new MockFileWriteLocationPolicy(Lists.<WorkerNetAddress>newArrayList()));
-    mException.expect(UnavailableException.class);
-    mException
-        .expectMessage(ExceptionMessage.NO_SPACE_FOR_BLOCK_ON_WORKER.getMessage(BLOCK_LENGTH));
-    mBlockStore.getOutStream(BLOCK_ID, BLOCK_LENGTH, options);
+    try {
+      mBlockStore.getOutStream(BLOCK_ID, BLOCK_LENGTH, options);
+      Assert.fail("missing location policy should fail");
+    } catch (NullPointerException e) {
+      Assert.assertEquals(PreconditionMessage.FILE_WRITE_LOCATION_POLICY_UNSPECIFIED.toString(),
+          e.getMessage());
+    }
   }
 
   @Test
   public void getOutStreamLocal() throws Exception {
-    File file = File.createTempFile("test", ".tmp");
+    File tmp = mTestFolder.newFile();
     ProtoMessage message = new ProtoMessage(
-        Protocol.LocalBlockCreateResponse.newBuilder().setPath(file.getAbsolutePath()).build());
+        Protocol.LocalBlockCreateResponse.newBuilder().setPath(tmp.getAbsolutePath()).build());
     PowerMockito.mockStatic(NettyRPC.class);
     Mockito.when(NettyRPC.call(Mockito.any(NettyRPCContext.class), Mockito.any(ProtoMessage.class)))
         .thenReturn(message);

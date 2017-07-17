@@ -381,7 +381,7 @@ public final class GlusterFSUnderFileSystem extends BaseUnderFileSystem
           inputStream.close();
           throw e;
         }
-        return inputStream;
+        return new GlusterFSUnderFileInputStream(inputStream);
       } catch (IOException e) {
         LOG.warn("{} try to open {} : {}", retryPolicy.getRetryCount(), path, e.getMessage());
         te = e;

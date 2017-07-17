@@ -11,8 +11,6 @@
 
 package alluxio;
 
-import alluxio.exception.status.AlluxioStatusException;
-import alluxio.exception.status.Status;
 import alluxio.security.LoginUser;
 import alluxio.security.authentication.AuthenticatedClientUser;
 import alluxio.util.SecurityUtils;
@@ -46,14 +44,14 @@ public final class RestUtils {
       }
     } catch (IOException e) {
       LOG.warn("Failed to set AuthenticatedClientUser in REST service handler: {}", e.getMessage());
-      return createErrorResponse(e);
+      return createErrorResponse(e.getMessage());
     }
 
     try {
       return createResponse(callable.call());
     } catch (Exception e) {
       LOG.warn("Unexpected error invoking rest endpoint: {}", e.getMessage());
-      return createErrorResponse(e);
+      return createErrorResponse(e.getMessage());
     }
   }
 
@@ -87,56 +85,20 @@ public final class RestUtils {
       try {
         return Response.ok(mapper.writeValueAsString(object)).build();
       } catch (JsonProcessingException e) {
-        return createErrorResponse(e);
+        return createErrorResponse(e.getMessage());
       }
     }
     return Response.ok(object).build();
   }
 
   /**
-   * Error response when {@link RestCallable#call()} throws an exception.
-   * It will be encoded into a Json string to be returned as an error response for the REST call.
-   */
-  public static class ErrorResponse {
-    private final Status mStatus;
-    private final String mMessage;
-
-    /**
-     * Creates a new {@link ErrorResponse}.
-     *
-     * @param status the RPC call result's {@link Status}
-     * @param message the error message
-     */
-    public ErrorResponse(Status status, String message) {
-      mStatus = status;
-      mMessage = message;
-    }
-
-    /**
-     * @return the status
-     */
-    public Status getStatus() {
-      return mStatus;
-    }
-
-    /**
-     * @return the error message
-     */
-    public String getMessage() {
-      return mMessage;
-    }
-  }
-
-  /**
-   * Creates an error response using the given exception.
+   * Creates an error response using the given message.
    *
-   * @param e the exception to be converted into {@link ErrorResponse} and encoded into json
+   * @param message the message to respond with
    * @return the response
    */
-  private static Response createErrorResponse(Exception e) {
-    AlluxioStatusException se = AlluxioStatusException.fromThrowable(e);
-    ErrorResponse response = new ErrorResponse(se.getStatus(), se.getMessage());
-    return Response.serverError().entity(response).build();
+  private static Response createErrorResponse(String message) {
+    return Response.serverError().entity(message).build();
   }
 
   private RestUtils() {} // prevent instantiation

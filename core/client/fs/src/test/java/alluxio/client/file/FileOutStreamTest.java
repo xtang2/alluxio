@@ -37,11 +37,9 @@ import alluxio.client.block.stream.UnderFileSystemFileOutStream;
 import alluxio.client.file.options.CompleteFileOptions;
 import alluxio.client.file.options.GetStatusOptions;
 import alluxio.client.file.options.OutStreamOptions;
-import alluxio.client.file.policy.FileWriteLocationPolicy;
 import alluxio.client.util.ClientTestUtils;
 import alluxio.exception.ExceptionMessage;
 import alluxio.exception.PreconditionMessage;
-import alluxio.exception.status.UnavailableException;
 import alluxio.resource.DummyCloseableResource;
 import alluxio.security.GroupMappingServiceTestUtils;
 import alluxio.util.io.BufferUtils;
@@ -54,7 +52,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -77,9 +74,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class FileOutStreamTest {
   @Rule
   public LoginUserRule mLoginUser = new LoginUserRule("Test");
-
-  @Rule
-  public ExpectedException mException = ExpectedException.none();
 
   private static final long BLOCK_LENGTH = 100L;
   private static final AlluxioURI FILE_NAME = new AlluxioURI("/file");
@@ -395,21 +389,6 @@ public class FileOutStreamTest {
       mTestStream.flush();
       Assert.assertEquals(BLOCK_LENGTH, mTestStream.getBytesWritten());
     }
-  }
-
-  @Test
-  public void createWithNoWorker() throws Exception {
-    OutStreamOptions options =
-        OutStreamOptions.defaults().setLocationPolicy(new FileWriteLocationPolicy() {
-          @Override
-          public WorkerNetAddress getWorkerForNextBlock(Iterable<BlockWorkerInfo> workerInfoList,
-              long blockSizeBytes) {
-            return null;
-          }
-        }).setWriteType(WriteType.CACHE_THROUGH);
-    mException.expect(UnavailableException.class);
-    mException.expectMessage(ExceptionMessage.NO_WORKER_AVAILABLE.getMessage());
-    mTestStream = createTestStream(FILE_NAME, options);
   }
 
   private void verifyIncreasingBytesWritten(int len) {

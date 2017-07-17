@@ -105,14 +105,18 @@ public class AbstractFileSystemTest {
    */
   @Test
   public void hadoopShouldLoadFaultTolerantFileSystemWhenConfigured() throws Exception {
+    org.apache.hadoop.conf.Configuration conf = new org.apache.hadoop.conf.Configuration();
+    if (HadoopClientTestUtils.isHadoop1x()) {
+      conf.set("fs." + Constants.SCHEME_FT + ".impl", FaultTolerantFileSystem.class.getName());
+    }
+
     URI uri = URI.create(Constants.HEADER_FT + "localhost:19998/tmp/path.txt");
 
     try (Closeable c = new ConfigurationRule(ImmutableMap.of(
         PropertyKey.MASTER_HOSTNAME, uri.getHost(),
         PropertyKey.MASTER_RPC_PORT, Integer.toString(uri.getPort()),
-            PropertyKey.ZOOKEEPER_ENABLED, "true")).toResource()) {
-      final org.apache.hadoop.fs.FileSystem fs =
-          org.apache.hadoop.fs.FileSystem.get(uri, getConf());
+        PropertyKey.ZOOKEEPER_ENABLED, "true")).toResource()) {
+      final org.apache.hadoop.fs.FileSystem fs = org.apache.hadoop.fs.FileSystem.get(uri, conf);
       Assert.assertTrue(fs instanceof FaultTolerantFileSystem);
     }
   }
@@ -122,26 +126,15 @@ public class AbstractFileSystemTest {
    */
   @Test
   public void loadFaultTolerantSystemWhenUsingNoAuthority() throws Exception {
-    URI uri = URI.create(Constants.HEADER_FT + "/tmp/path.txt");
-    try (Closeable c = new ConfigurationRule(PropertyKey.ZOOKEEPER_ENABLED, "true").toResource()) {
-      final org.apache.hadoop.fs.FileSystem fs =
-          org.apache.hadoop.fs.FileSystem.get(uri, getConf());
-      Assert.assertTrue(fs instanceof FaultTolerantFileSystem);
+    org.apache.hadoop.conf.Configuration conf = new org.apache.hadoop.conf.Configuration();
+    if (HadoopClientTestUtils.isHadoop1x()) {
+      conf.set("fs." + Constants.SCHEME_FT + ".impl", FaultTolerantFileSystem.class.getName());
     }
-  }
 
-  /**
-   * Tests that using an alluxio-ft:/// URI is still possible after using an alluxio://host:port/
-   * URI.
-   */
-  @Test
-  public void loadRegularThenFaultTolerant() throws Exception {
-    try (Closeable c = new ConfigurationRule(ImmutableMap.of(
-        PropertyKey.ZOOKEEPER_ENABLED, "true",
-        PropertyKey.ZOOKEEPER_ADDRESS, "host:2")).toResource()) {
-      org.apache.hadoop.fs.FileSystem.get(URI.create(Constants.HEADER + "host:1/"), getConf());
-      org.apache.hadoop.fs.FileSystem fs =
-          org.apache.hadoop.fs.FileSystem.get(URI.create(Constants.HEADER_FT + "/"), getConf());
+    URI uri = URI.create(Constants.HEADER_FT + "/tmp/path.txt");
+    try (Closeable c = new ConfigurationRule(PropertyKey.ZOOKEEPER_ENABLED, "true")
+        .toResource()) {
+      final org.apache.hadoop.fs.FileSystem fs = org.apache.hadoop.fs.FileSystem.get(uri, conf);
       Assert.assertTrue(fs instanceof FaultTolerantFileSystem);
     }
   }
@@ -329,7 +322,6 @@ public class AbstractFileSystemTest {
     org.apache.hadoop.conf.Configuration conf = new org.apache.hadoop.conf.Configuration();
     if (HadoopClientTestUtils.isHadoop1x()) {
       conf.set("fs." + Constants.SCHEME + ".impl", FileSystem.class.getName());
-      conf.set("fs." + Constants.SCHEME_FT + ".impl", FaultTolerantFileSystem.class.getName());
     }
     return conf;
   }

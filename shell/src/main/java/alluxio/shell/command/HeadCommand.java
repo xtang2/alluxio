@@ -49,11 +49,6 @@ public final class HeadCommand extends WithWildCardPathCommand {
   }
 
   @Override
-  protected int getNumOfArgs() {
-    return 1;
-  }
-
-  @Override
   protected void runCommand(AlluxioURI path, CommandLine cl) throws AlluxioException, IOException {
     URIStatus status = mFileSystem.getStatus(path);
 

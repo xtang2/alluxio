@@ -64,11 +64,10 @@ public final class WorkerUfsManager extends AbstractUfsManager {
           String.format("Failed to get UFS info for mount point with id %d", mountId), e);
     }
     Preconditions.checkState((info.isSetUri() && info.isSetProperties()), "unknown mountId");
-    super.addMount(mountId, new AlluxioURI(info.getUri()),
+    UfsInfo ufsInfo = super.addMount(mountId, new AlluxioURI(info.getUri()),
         UnderFileSystemConfiguration.defaults().setReadOnly(info.getProperties().isReadOnly())
             .setShared(info.getProperties().isShared())
             .setUserSpecifiedConf(info.getProperties().getProperties()));
-    UfsInfo ufsInfo = super.get(mountId);
     try {
       ufsInfo.getUfs().connectFromWorker(
           NetworkAddressUtils.getConnectHost(NetworkAddressUtils.ServiceType.WORKER_RPC));

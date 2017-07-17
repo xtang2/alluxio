@@ -15,7 +15,6 @@ import alluxio.AlluxioURI;
 import alluxio.client.file.URIStatus;
 import alluxio.master.file.meta.PersistenceState;
 import alluxio.security.authorization.Mode;
-import alluxio.util.CommonUtils;
 import alluxio.util.FormatUtils;
 import alluxio.wire.FileInfo;
 
@@ -211,14 +210,14 @@ public final class UIFileInfo {
     if (mCreationTimeMs == LocalFileInfo.EMPTY_CREATION_TIME) {
       return "";
     }
-    return CommonUtils.convertMsToDate(mCreationTimeMs);
+    return WebUtils.convertMsToDate(mCreationTimeMs);
   }
 
   /**
    * @return the modification time (in milliseconds)
    */
   public String getModificationTime() {
-    return CommonUtils.convertMsToDate(mLastModificationTimeMs);
+    return WebUtils.convertMsToDate(mLastModificationTimeMs);
   }
 
   /**

@@ -28,8 +28,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.ExecutorService;
-
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
@@ -42,8 +40,6 @@ class DataServerShortCircuitWriteHandler extends ChannelInboundHandlerAdapter {
 
   private static final long INVALID_SESSION_ID = -1;
 
-  /** Executor service for execute the RPCs. */
-  private final ExecutorService mRpcExecutor;
   /** The block worker. */
   private final BlockWorker mBlockWorker;
   /** An object storing the mapping of tier aliases to ordinals. */
@@ -54,11 +50,9 @@ class DataServerShortCircuitWriteHandler extends ChannelInboundHandlerAdapter {
   /**
    * Creates an instance of {@link DataServerShortCircuitWriteHandler}.
    *
-   * @param service the executor to execute the RPCs
    * @param blockWorker the block worker
    */
-  DataServerShortCircuitWriteHandler(ExecutorService service, BlockWorker blockWorker) {
-    mRpcExecutor = service;
+  DataServerShortCircuitWriteHandler(BlockWorker blockWorker) {
     mBlockWorker = blockWorker;
   }
 
@@ -105,54 +99,49 @@ class DataServerShortCircuitWriteHandler extends ChannelInboundHandlerAdapter {
    */
   private void handleBlockCreateRequest(final ChannelHandlerContext ctx,
       final Protocol.LocalBlockCreateRequest request) {
-    mRpcExecutor.submit(new Runnable() {
+    RpcUtils.nettyRPCAndLog(LOG, new RpcUtils.NettyRPCCallable<Void>() {
+
       @Override
-      public void run() {
-        RpcUtils.nettyRPCAndLog(LOG, new RpcUtils.NettyRPCCallable<Void>() {
-
-          @Override
-          public Void call() throws Exception {
-            if (request.getOnlyReserveSpace()) {
-              mBlockWorker
-                  .requestSpace(mSessionId, request.getBlockId(), request.getSpaceToReserve());
-              ctx.writeAndFlush(RPCProtoMessage.createOkResponse(null));
-            } else {
-              if (mSessionId == INVALID_SESSION_ID) {
-                mSessionId = IdUtils.createSessionId();
-                String path = mBlockWorker.createBlock(mSessionId, request.getBlockId(),
-                    mStorageTierAssoc.getAlias(request.getTier()), request.getSpaceToReserve());
-                Protocol.LocalBlockCreateResponse response =
-                    Protocol.LocalBlockCreateResponse.newBuilder().setPath(path).build();
-                ctx.writeAndFlush(new RPCProtoMessage(new ProtoMessage(response)));
-              } else {
-                LOG.warn("Create block {} without closing the previous session {}.",
-                    request.getBlockId(), mSessionId);
-                throw new InvalidWorkerStateException(
-                    ExceptionMessage.SESSION_NOT_CLOSED.getMessage(mSessionId));
-              }
-            }
-            return null;
+      public Void call() throws Exception {
+        if (request.getOnlyReserveSpace()) {
+          mBlockWorker.requestSpace(mSessionId, request.getBlockId(),
+              request.getSpaceToReserve());
+          ctx.writeAndFlush(RPCProtoMessage.createOkResponse(null));
+        } else {
+          if (mSessionId == INVALID_SESSION_ID) {
+            mSessionId = IdUtils.createSessionId();
+            String path = mBlockWorker.createBlock(mSessionId, request.getBlockId(),
+                mStorageTierAssoc.getAlias(request.getTier()), request.getSpaceToReserve());
+            Protocol.LocalBlockCreateResponse response =
+                Protocol.LocalBlockCreateResponse.newBuilder().setPath(path).build();
+            ctx.writeAndFlush(new RPCProtoMessage(new ProtoMessage(response)));
+          } else {
+            LOG.warn("Create block {} without closing the previous session {}.",
+                request.getBlockId(), mSessionId);
+            throw new InvalidWorkerStateException(
+                ExceptionMessage.SESSION_NOT_CLOSED.getMessage(mSessionId));
           }
+        }
+        return null;
+      }
 
-          @Override
-          public void exceptionCaught(Throwable throwable) {
-            if (mSessionId != INVALID_SESSION_ID) {
-              mBlockWorker.cleanupSession(mSessionId);
-              mSessionId = INVALID_SESSION_ID;
-            }
-            ctx.writeAndFlush(
-                RPCProtoMessage.createResponse(AlluxioStatusException.fromThrowable(throwable)));
-          }
+      @Override
+      public void exceptionCaught(Throwable throwable) {
+        if (mSessionId != INVALID_SESSION_ID) {
+          mBlockWorker.cleanupSession(mSessionId);
+          mSessionId = INVALID_SESSION_ID;
+        }
+        ctx.writeAndFlush(
+            RPCProtoMessage.createResponse(AlluxioStatusException.fromThrowable(throwable)));
+      }
 
-          @Override
-          public String toString() {
-            if (request.getOnlyReserveSpace()) {
-              return String.format("Session %d: reserve space: %s", mSessionId, request.toString());
-            } else {
-              return String.format("Session %d: create block: %s", mSessionId, request.toString());
-            }
-          }
-        });
+      @Override
+      public String toString() {
+        if (request.getOnlyReserveSpace()) {
+          return String.format("Session %d: reserve space: %s", mSessionId, request.toString());
+        } else {
+          return String.format("Session %d: create block: %s", mSessionId, request.toString());
+        }
       }
     });
   }
@@ -165,40 +154,34 @@ class DataServerShortCircuitWriteHandler extends ChannelInboundHandlerAdapter {
    */
   private void handleBlockCompleteRequest(final ChannelHandlerContext ctx,
       final Protocol.LocalBlockCompleteRequest request) {
-    mRpcExecutor.submit(new Runnable() {
+    RpcUtils.nettyRPCAndLog(LOG, new RpcUtils.NettyRPCCallable<Void>() {
+
       @Override
-      public void run() {
+      public Void call() throws Exception {
+        if (request.getCancel()) {
+          mBlockWorker.abortBlock(mSessionId, request.getBlockId());
+        } else {
+          mBlockWorker.commitBlock(mSessionId, request.getBlockId());
+        }
+        mSessionId = INVALID_SESSION_ID;
+        ctx.writeAndFlush(RPCProtoMessage.createOkResponse(null));
+        return null;
+      }
 
-        RpcUtils.nettyRPCAndLog(LOG, new RpcUtils.NettyRPCCallable<Void>() {
+      @Override
+      public void exceptionCaught(Throwable throwable) {
+        ctx.writeAndFlush(
+            RPCProtoMessage.createResponse(AlluxioStatusException.fromThrowable(throwable)));
+        mSessionId = INVALID_SESSION_ID;
+      }
 
-          @Override
-          public Void call() throws Exception {
-            if (request.getCancel()) {
-              mBlockWorker.abortBlock(mSessionId, request.getBlockId());
-            } else {
-              mBlockWorker.commitBlock(mSessionId, request.getBlockId());
-            }
-            mSessionId = INVALID_SESSION_ID;
-            ctx.writeAndFlush(RPCProtoMessage.createOkResponse(null));
-            return null;
-          }
-
-          @Override
-          public void exceptionCaught(Throwable throwable) {
-            ctx.writeAndFlush(
-                RPCProtoMessage.createResponse(AlluxioStatusException.fromThrowable(throwable)));
-            mSessionId = INVALID_SESSION_ID;
-          }
-
-          @Override
-          public String toString() {
-            if (request.getCancel()) {
-              return String.format("Session %d: abort block: %s", mSessionId, request.toString());
-            } else {
-              return String.format("Session %d: commit block: %s", mSessionId, request.toString());
-            }
-          }
-        });
+      @Override
+      public String toString() {
+        if (request.getCancel()) {
+          return String.format("Session %d: abort block: %s", mSessionId, request.toString());
+        } else {
+          return String.format("Session %d: commit block: %s", mSessionId, request.toString());
+        }
       }
     });
   }
